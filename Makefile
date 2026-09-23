@@ -1,6 +1,6 @@
 # Makefile for Architecture Governance Toolkit
 
-.PHONY: help build-analysis-image run-analysis adr-new artifacts-dir
+.PHONY: help build build-analysis-image run-analysis adr-new artifacts-dir sbom hotspots ownership drift risk full-analysis clean
 
 ANALYSIS_IMAGE=analysis:local
 ARTIFACTS_DIR=artifacts
@@ -8,12 +8,16 @@ ARTIFACTS_DIR=artifacts
 help:
 	@echo "Architecture Governance Toolkit - Available Commands:"
 	@echo ""
+	@echo "  make build                  - Build Python wheel and sdist package artifacts"
 	@echo "  make artifacts-dir          - Create artifacts directory"
 	@echo "  make build-analysis-image   - Build Docker analysis image"
 	@echo "  make run-analysis           - Run analysis in Docker"
 	@echo "  make adr-new TITLE='...'    - Create new ADR"
 	@echo "  make clean                  - Remove artifacts directory"
 	@echo ""
+
+build:
+	python3 -m build
 
 artifacts-dir:
 	mkdir -p $(ARTIFACTS_DIR)/sbom $(ARTIFACTS_DIR)/timeseries

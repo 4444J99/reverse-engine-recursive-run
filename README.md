@@ -356,6 +356,14 @@ Optional for extended features:
 - Trivy and/or Semgrep for security scanning
 - Syft for SBOM generation
 
+### One-Command Validation
+
+To validate the repository, execute the unit test suite and run the full governance analysis pipeline in a single command:
+
+```bash
+python3 -m pytest && make full-analysis
+```
+
 ### Option 1: Run Directly
 
 ```bash

@@ -12,20 +12,30 @@ metadata:
   implementation_status: ACTIVE
   tier: standard
   promotion_status: CANDIDATE
-  last_validated: "2026-02-12"
+  last_validated: "2026-04-14"
   generated: "2026-02-17"
   sprint: "SENSORIA"
   language: python
+  validation_command: "python3 -m pytest && make full-analysis"
+  publication_target: "github_release"
+  release_url: "https://github.com/organvm-iv-taxis/reverse-engine-recursive-run/releases"
+  build_artifact: "dist/reverse_engine_recursive_run-0.1.0-py3-none-any.whl"
 
 agents:
   - name: ci
     trigger: on_push
-    workflow: .github/workflows/ci-python.yml
+    workflow: .github/workflows/ci.yml
     description: "Continuous integration pipeline"
+  - name: release
+    trigger: on_tag
+    workflow: .github/workflows/release.yml
+    description: "Release build and artifact publication pipeline"
 
 produces:
   - type: theory
     description: "Epistemological frameworks, recursive engines, ontological systems"
+  - type: release_artifact
+    description: "Python wheel and sdist package distributions attached to GitHub releases"
 
 consumes: []
 
