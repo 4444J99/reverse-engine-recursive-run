@@ -261,6 +261,85 @@ class TestScanDrift:
         os.unlink(cur_path)
         os.unlink(out_path)
 
+    def _drift_graph_paths(self):
+        """Prev/cur graph pair with churn 1.0 (1 added edge over 1 previous)."""
+        prev = {
+            "nodes": [{"id": "A"}, {"id": "B"}],
+            "edges": [{"from": "A", "to": "B", "type": "import"}],
+        }
+        cur = {
+            "nodes": [{"id": "A"}, {"id": "B"}, {"id": "C"}],
+            "edges": [
+                {"from": "A", "to": "B", "type": "import"},
+                {"from": "A", "to": "C", "type": "import"},
+            ],
+        }
+        fd_prev, prev_path = tempfile.mkstemp(suffix=".json")
+        fd_cur, cur_path = tempfile.mkstemp(suffix=".json")
+        with os.fdopen(fd_prev, "w") as f:
+            json.dump(prev, f)
+        with os.fdopen(fd_cur, "w") as f:
+            json.dump(cur, f)
+        return prev_path, cur_path
+
+    def test_drift_threshold_validation_rejects_invalid(self):
+        """Invalid thresholds fail at parse time, before any report is written."""
+        import sys
+
+        from scan_drift import main as drift_main
+
+        prev_path, cur_path = self._drift_graph_paths()
+        try:
+            for value in ("nan", "inf", "-inf", "-0.1", "1.1"):
+                fd_out, out_path = tempfile.mkstemp(suffix=".json")
+                # Pre-existing report must not be overwritten by a rejected run.
+                with os.fdopen(fd_out, "w") as f:
+                    f.write("sentinel")
+                old_argv = sys.argv
+                sys.argv = ["scan_drift", "--current", cur_path, "--previous", prev_path,
+                            f"--threshold={value}", "--out", out_path]
+                try:
+                    with pytest.raises(SystemExit) as exc_info:
+                        drift_main()
+                finally:
+                    sys.argv = old_argv
+                assert exc_info.value.code == 2
+                with open(out_path) as f:
+                    assert f.read() == "sentinel"
+                os.unlink(out_path)
+        finally:
+            os.unlink(prev_path)
+            os.unlink(cur_path)
+
+    def test_drift_threshold_boundaries_remain_valid(self):
+        """Boundary thresholds 0 and 1 keep the inclusive breach rule."""
+        import sys
+
+        from scan_drift import main as drift_main
+
+        prev_path, cur_path = self._drift_graph_paths()
+        try:
+            for value in ("0", "1"):
+                fd_out, out_path = tempfile.mkstemp(suffix=".json")
+                os.close(fd_out)
+                old_argv = sys.argv
+                sys.argv = ["scan_drift", "--current", cur_path, "--previous", prev_path,
+                            "--threshold", value, "--out", out_path]
+                try:
+                    with pytest.raises(SystemExit) as exc_info:
+                        drift_main()
+                finally:
+                    sys.argv = old_argv
+                # Churn is 1.0, so both boundaries breach under >= comparison.
+                assert exc_info.value.code == 2
+                with open(out_path) as f:
+                    report = json.load(f)
+                assert report["summary"]["breach"] is True
+                os.unlink(out_path)
+        finally:
+            os.unlink(prev_path)
+            os.unlink(cur_path)
+
 
 # ─── ownership_diff tests ──────────────────────────────────────────
 
