@@ -46,7 +46,7 @@ Exit code:
   2 if drift >= threshold (trigger pipeline action)
 
 """
-import json, argparse, sys, hashlib
+import json, argparse, sys, hashlib, math
 from collections import defaultdict
 
 def load(path):
@@ -56,11 +56,29 @@ def load(path):
 def edge_key(e):
     return (e["from"], e["to"], e.get("type",""))
 
+def threshold_type(value):
+    """Argparse type: accept only a finite threshold in the range 0 <= t <= 1.
+
+    Runs during argument parsing, so an invalid threshold is rejected before
+    any input is read or any report is written. Without this, NaN makes every
+    churn comparison false and a real drift breach is reported as no breach.
+    """
+    try:
+        threshold = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"threshold must be a number, got {value!r}")
+    if not math.isfinite(threshold) or not 0 <= threshold <= 1:
+        raise argparse.ArgumentTypeError(
+            f"threshold must be a finite value in the range 0 to 1, got {value!r}"
+        )
+    return threshold
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--current", required=True)
     ap.add_argument("--previous", required=True)
-    ap.add_argument("--threshold", type=float, default=0.1)
+    ap.add_argument("--threshold", type=threshold_type, default=0.1)
     ap.add_argument("--out", required=True)
     ap.add_argument("--mode", choices=["deps","services"], default="deps")
     args = ap.parse_args()
