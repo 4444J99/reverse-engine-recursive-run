@@ -291,9 +291,9 @@ class TestScanDrift:
         prev_path, cur_path = self._drift_graph_paths()
         try:
             for value in ("nan", "inf", "-inf", "-0.1", "1.1"):
-                out_path = tempfile.mktemp(suffix=".json")
+                fd_out, out_path = tempfile.mkstemp(suffix=".json")
                 # Pre-existing report must not be overwritten by a rejected run.
-                with open(out_path, "w") as f:
+                with os.fdopen(fd_out, "w") as f:
                     f.write("sentinel")
                 old_argv = sys.argv
                 sys.argv = ["scan_drift", "--current", cur_path, "--previous", prev_path,
