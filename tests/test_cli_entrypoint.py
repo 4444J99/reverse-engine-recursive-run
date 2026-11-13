@@ -5,6 +5,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 
 def load_cli_module():
     cli_path = Path(__file__).resolve().parents[1] / "scripts" / "__main__.py"
@@ -150,6 +152,91 @@ def test_drift_command_returns_zero_when_churn_is_below_threshold(tmp_path):
     )
 
     assert rc == 0
+
+
+def test_drift_command_rejects_invalid_thresholds(tmp_path):
+    cli = load_cli_module()
+    previous = write_json(
+        tmp_path / "previous.json",
+        {"edges": [{"from": "A", "to": "B", "type": "import"}]},
+    )
+    current = write_json(
+        tmp_path / "current.json",
+        {
+            "edges": [
+                {"from": "A", "to": "B", "type": "import"},
+                {"from": "A", "to": "C", "type": "import"},
+            ]
+        },
+    )
+
+    for value in ("nan", "inf", "-inf", "-0.1", "1.1"):
+        with pytest.raises(SystemExit) as exc_info:
+            cli.main(
+                [
+                    "drift",
+                    "--current",
+                    str(current),
+                    "--previous",
+                    str(previous),
+                    f"--threshold={value}",
+                ]
+            )
+        assert exc_info.value.code == 2
+
+
+def test_drift_command_threshold_boundaries(tmp_path):
+    cli = load_cli_module()
+    previous = write_json(
+        tmp_path / "previous.json",
+        {"edges": [{"from": "A", "to": "B", "type": "import"}]},
+    )
+    current = write_json(
+        tmp_path / "current.json",
+        {
+            "edges": [
+                {"from": "A", "to": "B", "type": "import"},
+                {"from": "A", "to": "C", "type": "import"},
+            ]
+        },
+    )
+
+    # Churn is 1.0, so both boundaries breach under the inclusive rule.
+    for value in ("0", "1"):
+        assert (
+            cli.main(
+                [
+                    "drift",
+                    "--current",
+                    str(current),
+                    "--previous",
+                    str(previous),
+                    "--threshold",
+                    value,
+                ]
+            )
+            == 2
+        )
+
+    # No churn at all stays below boundary threshold 1.
+    same = write_json(
+        tmp_path / "same.json",
+        {"edges": [{"from": "A", "to": "B", "type": "import"}]},
+    )
+    assert (
+        cli.main(
+            [
+                "drift",
+                "--current",
+                str(same),
+                "--previous",
+                str(previous),
+                "--threshold",
+                "1",
+            ]
+        )
+        == 0
+    )
 
 
 def test_sbom_and_missing_command_return_documented_exit_codes(capsys):
