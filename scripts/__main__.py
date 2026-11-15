@@ -84,6 +84,24 @@ def cmd_risk(args: argparse.Namespace) -> int:
     return 0
 
 
+def drift_threshold(value: str) -> float:
+    """Argparse type for the drift threshold: finite, 0 <= t <= 1.
+
+    Mirrors scan_drift.threshold_type (kept as a local copy because this
+    module is also loaded standalone in tests, where the sibling script may
+    not be importable). Runs during parsing, before any input is read.
+    """
+    try:
+        threshold = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"threshold must be a number, got {value!r}")
+    if not math.isfinite(threshold) or not 0 <= threshold <= 1:
+        raise argparse.ArgumentTypeError(
+            f"threshold must be a finite value in the range 0 to 1, got {value!r}"
+        )
+    return threshold
+
+
 def cmd_drift(args: argparse.Namespace) -> int:
     """Compare dependency graphs for architecture drift."""
     from scan_drift import load, edge_key
@@ -135,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     p_drift = sub.add_parser("drift", help="Check architecture drift")
     p_drift.add_argument("--current", required=True, help="Current graph JSON")
     p_drift.add_argument("--previous", required=True, help="Previous graph JSON")
-    p_drift.add_argument("--threshold", type=float, default=0.1)
+    p_drift.add_argument("--threshold", type=drift_threshold, default=0.1)
     p_drift.add_argument("--out", help="Output file")
 
     # sbom
