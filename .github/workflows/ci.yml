@@ -35,3 +35,34 @@ jobs:
 
       - name: Test with pytest
         run: pytest tests/ -v
+
+      - name: Build wheel and sdist
+        run: |
+          pip install build
+          python -m build
+
+      - name: Verify wheel contents
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          expected = ["hotspot_merge", "ownership_diff", "parse_semgrep", "parse_trivy", "risk_update", "scan_drift"]
+          missing = [m for m in expected if f"{m}.py" not in names]
+          assert not missing, f"wheel missing modules: {missing}; contents: {names}"
+          PY
+
+      - name: Smoke test built wheel in clean environment
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/bin/pip" install dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/smoke/bin/python" -c "import hotspot_merge, ownership_diff, parse_semgrep, parse_trivy, risk_update, scan_drift"
+          "$RUNNER_TEMP/smoke/bin/python" -m hotspot_merge --help
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error

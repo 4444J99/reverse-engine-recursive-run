@@ -356,13 +356,21 @@ Optional for extended features:
 - Trivy and/or Semgrep for security scanning
 - Syft for SBOM generation
 
-### One-Command Validation
+### Local Build and Validation
 
-To validate the repository, execute the unit test suite and run the full governance analysis pipeline in a single command:
+Run the unit tests and the full governance analysis pipeline:
 
 ```bash
 python3 -m pytest && make full-analysis
 ```
+
+Build the wheel and sdist locally (written to `dist/`; requires `pip install build`):
+
+```bash
+make build
+```
+
+CI builds these artifacts, inspects the wheel contents, smoke-tests it in a clean environment and uploads `dist/` as a CI artifact only. No release or publication has occurred.
 
 ### Option 1: Run Directly
 

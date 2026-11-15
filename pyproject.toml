@@ -19,9 +19,16 @@ dev = [
     "ruff>=0.4.0",
 ]
 
-[tool.setuptools.packages.find]
-where = ["scripts"]
-include = []
+[tool.setuptools]
+package-dir = {"" = "scripts"}
+py-modules = [
+    "hotspot_merge",
+    "ownership_diff",
+    "parse_semgrep",
+    "parse_trivy",
+    "risk_update",
+    "scan_drift",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
